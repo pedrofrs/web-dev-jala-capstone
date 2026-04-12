@@ -1,0 +1,139 @@
+// FormPage.scss
+$form-primary: var(--primary);
+$form-background: var(--background);
+$form-foreground: var(--foreground);
+$form-border: var(--border);
+$form-radius: var(--radius);
+$form-muted: var(--muted);
+
+.form-page {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  background-color: $form-background;
+  color: $form-foreground;
+
+  .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    background-color: $form-primary;
+    color: var(--primary-foreground);
+
+    h1 {
+      font-size: 2rem;
+      margin: 0;
+    }
+
+    p {
+      margin: 0.5rem 0 0 0;
+    }
+  }
+
+  .main-content {
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    padding: 2rem;
+
+    .form-card {
+      width: 100%;
+      max-width: 600px;
+      padding: 2rem;
+      border-radius: $form-radius;
+      border: 1px solid $form-border;
+      background-color: var(--card);
+      color: var(--card-foreground);
+
+      .form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+
+          label {
+            font-weight: 500;
+          }
+
+          .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+
+            .checkbox-item {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+            }
+          }
+
+          .error {
+            color: var(--destructive);
+            font-size: 0.875rem;
+          }
+        }
+
+        button[type="submit"] {
+          align-self: start;
+          background-color: $form-primary;
+          color: var(--primary-foreground);
+          border-radius: $form-radius;
+          padding: 0.5rem 1rem;
+          border: none;
+          cursor: pointer;
+
+          &:hover {
+            opacity: 0.9;
+          }
+        }
+      }
+    }
+
+    .confirmation {
+      text-align: center;
+      padding: 2rem;
+      border-radius: $form-radius;
+      border: 1px solid $form-border;
+      background-color: var(--card);
+      color: var(--card-foreground);
+
+      h2 {
+        color: var(--success);
+        margin: 0 0 1rem 0;
+      }
+
+      p {
+        margin: 0 0 1rem 0;
+      }
+
+      button {
+        background-color: $form-primary;
+        color: var(--primary-foreground);
+      }
+    }
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .header {
+      padding: 1rem;
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    .main-content {
+      padding: 1rem;
+
+      .form-card {
+        padding: 1rem;
+      }
+    }
+  }
+}
