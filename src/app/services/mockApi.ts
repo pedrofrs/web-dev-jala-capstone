@@ -96,8 +96,13 @@ export const mockApiEndpoints: Record<string, any> = {
     };
   },
 
-  'POST /api/auth/logout': async (token: string) => {
-    tokenBlacklist.add(token);
+  'POST /api/auth/logout': async (params: { headers?: Record<string, string> }) => {
+    const authHeader = params.headers?.authorization || params.headers?.Authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    if (token) {
+      tokenBlacklist.add(token);
+    }
+
     return { message: 'Logged out successfully' };
   },
 
@@ -111,7 +116,7 @@ export const mockApiEndpoints: Record<string, any> = {
       const parts = body.refreshToken.split('.');
       const payload = JSON.parse(atob(parts[1]));
       
-      const accessToken = generateToken({ userId: payload.userId }, 3600);
+      const accessToken = generateToken({ userId: payload.userId, email: payload.email }, 3600);
       return {
         accessToken,
         refreshToken: body.refreshToken,
@@ -121,7 +126,14 @@ export const mockApiEndpoints: Record<string, any> = {
     }
   },
 
-  'POST /api/auth/verify': async (token: string) => {
+  'POST /api/auth/verify': async (params: { headers?: Record<string, string> }) => {
+    const authHeader = params.headers?.authorization || params.headers?.Authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
+    if (!token) {
+      throw new Error('Missing Authorization header');
+    }
+
     if (tokenBlacklist.has(token)) {
       throw new Error('Token is invalid');
     }
@@ -242,7 +254,7 @@ export const setupMockAPI = () => {
 
           // Extract path parameters and merge with body
           const pathParams = extractPathParams(mockKey, urlPath);
-          const params = { ...pathParams, ...body };
+          const params = { ...pathParams, ...body, headers: config?.headers || {} };
 
           const result = await handler(params);
 
