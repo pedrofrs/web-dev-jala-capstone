@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, BookMarked } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { BookCard, BookCardSkeleton } from '../components/BookCard';
-import { mockBooks, departments, courseReserves } from '../lib/data';
+import { Book } from '../lib/data';
+import { searchBooks } from '../services/googleBooksApi';
+import { adaptGoogleBooksVolumesToBooks } from '../services/bookAdapter';
 import {
   Select,
   SelectContent,
@@ -14,19 +16,52 @@ import {
 import { Card } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
+const CATEGORIES = ['all', 'Fiction', 'Science', 'History', 'Philosophy'];
+const DEPARTMENTS = [
+  'General',
+  'Computer Science',
+  'History',
+  'Literature',
+  'Science',
+  'Philosophy',
+];
+
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('title');
   const [isLoading, setIsLoading] = useState(false);
+  const [books, setBooks] = useState<Book[]>([]);
   const [activeTab, setActiveTab] = useState('catalog');
 
-  const categories = ['all', 'Fiction', 'Science', 'History'];
+  // Fetch books when search query changes or on initial load
+  useEffect(() => {
+    const fetchBooks = async () => {
+      const queryToUse = searchQuery.trim() || 'programming'; // Default search if empty
+
+      setIsLoading(true);
+      try {
+        const response = await searchBooks(queryToUse, 0);
+        if (response.items) {
+          const adaptedBooks = adaptGoogleBooksVolumesToBooks(response.items);
+          setBooks(adaptedBooks);
+        } else {
+          setBooks([]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch books:', error);
+        setBooks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBooks();
+  }, [searchQuery]);
 
   const filteredAndSortedBooks = useMemo(() => {
-    let filtered = mockBooks;
+    let filtered = books;
 
     // Filter by search query (title, author, ISBN, DOI)
     if (searchQuery) {
@@ -64,17 +99,7 @@ export default function Dashboard() {
     });
 
     return sorted;
-  }, [searchQuery, selectedCategory, selectedDepartment, sortBy]);
-
-  const courseReserveBooks = useMemo(() => {
-    let filtered = mockBooks.filter((book) => book.courseReserve && book.courseReserve.length > 0);
-
-    if (selectedCourse !== 'all') {
-      filtered = filtered.filter((book) => book.courseReserve?.includes(selectedCourse));
-    }
-
-    return filtered;
-  }, [selectedCourse]);
+  }, [books, selectedCategory, selectedDepartment, sortBy]);
 
   return (
     <div className="min-h-screen p-8 space-y-8">
@@ -113,7 +138,7 @@ export default function Dashboard() {
           {/* Filters and Sort */}
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
+              {CATEGORIES.map((category) => (
                 <Button
                   key={category}
                   variant={selectedCategory === category ? 'default' : 'outline'}
@@ -136,7 +161,7 @@ export default function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((dept) => (
+                  {DEPARTMENTS.map((dept) => (
                     <SelectItem key={dept} value={dept}>
                       {dept}
                     </SelectItem>
@@ -190,53 +215,15 @@ export default function Dashboard() {
 
         {/* Course Reserves Tab */}
         <TabsContent value="course-reserves" className="space-y-6 mt-6">
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                <SelectTrigger className="w-full sm:w-[220px]">
-                  <SelectValue placeholder="Select Course" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Courses</SelectItem>
-                  {courseReserves.map((course) => (
-                    <SelectItem key={course} value={course}>
-                      {course}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Card className="p-4 bg-primary/5 border-primary/20 flex-1">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-primary">Required Reading:</span>{' '}
-                  Books designated by professors for specific courses
-                </p>
-              </Card>
-            </div>
-          </div>
-
-          {/* Course Reserve Books Grid */}
-          <div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {courseReserveBooks.length} required books found
+          <div className="text-center py-16 bg-card rounded-lg">
+            <BookMarked className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-bold text-secondary mb-2">
+              Coming Soon
+            </h3>
+            <p className="text-muted-foreground">
+              Course reserves will be available in a future update. 
+              Use the search feature to find required reading materials.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {courseReserveBooks.map((book) => (
-                <BookCard key={book.id} book={book} />
-              ))}
-            </div>
-
-            {courseReserveBooks.length === 0 && (
-              <Card className="text-center py-16">
-                <BookMarked className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-bold text-secondary mb-2">
-                  No Course Reserves
-                </h3>
-                <p className="text-muted-foreground">
-                  Select a course to view its required reading materials.
-                </p>
-              </Card>
-            )}
           </div>
         </TabsContent>
       </Tabs>

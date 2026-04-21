@@ -191,31 +191,6 @@ export const mockApiEndpoints: Record<string, any> = {
       ],
     };
   },
-
-  // Books endpoints
-  'GET /api/books': async () => {
-    return {
-      books: [
-        {
-          id: '1',
-          title: 'The Art of Computer Programming',
-          author: 'Donald Knuth',
-          status: 'available',
-          availabilityType: 'both',
-        },
-      ],
-    };
-  },
-
-  'GET /api/books/:id': async (id: string) => {
-    return {
-      id,
-      title: 'Sample Book',
-      author: 'Author Name',
-      status: 'available',
-      description: 'A great book',
-    };
-  },
 };
 
 /**

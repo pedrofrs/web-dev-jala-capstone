@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Calendar, FileText, Hash, User, MapPin, Award, Building2, Download, BookOpen } from 'lucide-react';
-import { mockBooks } from '../lib/data';
+import { Book } from '../lib/data';
+import { getBookDetails } from '../services/googleBooksApi';
+import { adaptGoogleBooksVolumeToBook } from '../services/bookAdapter';
 import { StatusBadge } from '../components/StatusBadge';
 import { CitationDialog } from '../components/CitationDialog';
 import { Button } from '../components/ui/button';
@@ -14,9 +16,40 @@ import { Separator } from '../components/ui/separator';
 export default function BookDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [book, setBook] = useState<Book | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [readingStatus, setReadingStatus] = useState<string>('reading');
 
-  const book = mockBooks.find((b) => b.id === id);
+  useEffect(() => {
+    const fetchBook = async () => {
+      if (!id) return;
+
+      setIsLoading(true);
+      try {
+        const volumeData = await getBookDetails(id);
+        if (volumeData) {
+          const adaptedBook = adaptGoogleBooksVolumeToBook(volumeData);
+          setBook(adaptedBook);
+        }
+      } catch (error) {
+        console.error('Failed to fetch book details:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBook();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!book) {
     return (

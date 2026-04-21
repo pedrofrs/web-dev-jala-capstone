@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Calendar, CheckCircle2, Clock, Heart, User, Mail, GraduationCap, ListOrdered } from 'lucide-react';
-import { mockLoans, mockUserBooks, mockStudent, mockReservations } from '../lib/data';
+import { mockLoans, mockUserBooks, mockStudent } from '../lib/data';
 import { FinesWidget } from '../components/FinesWidget';
 import { Progress } from '../components/ui/progress';
 import { Badge } from '../components/ui/badge';
@@ -218,79 +218,13 @@ export default function MyLibrary() {
 
         {/* Reservations Tab */}
         <TabsContent value="reservations" className="mt-8">
-          {mockReservations.length === 0 ? (
-            <div className="text-center py-16 bg-card rounded-lg">
-              <ListOrdered className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-bold text-secondary mb-2">No Active Reservations</h3>
-              <p className="text-muted-foreground">
-                You don't have any books in the reservation queue.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {mockReservations.map((reservation) => (
-                <Card key={reservation.id} className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    <div
-                      className="w-32 h-48 flex-shrink-0 rounded overflow-hidden cursor-pointer"
-                      onClick={() => navigate(`/book/${reservation.book.id}`)}
-                    >
-                      <img
-                        src={reservation.book.coverUrl}
-                        alt={reservation.book.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <h3
-                          className="text-xl font-bold text-secondary cursor-pointer hover:text-primary"
-                          onClick={() => navigate(`/book/${reservation.book.id}`)}
-                        >
-                          {reservation.book.title}
-                        </h3>
-                        <p className="text-muted-foreground">
-                          {reservation.book.author}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                            Queue Position
-                          </p>
-                          <Badge className="bg-warning text-warning-foreground">
-                            #{reservation.position} in queue
-                          </Badge>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                            Estimated Availability
-                          </p>
-                          <p className="text-sm font-medium">
-                            {new Date(reservation.estimatedAvailability).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                            Requested
-                          </p>
-                          <p className="text-sm font-medium">
-                            {new Date(reservation.requestedDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <Button variant="outline" size="sm">
-                        Cancel Reservation
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
+          <div className="text-center py-16 bg-card rounded-lg">
+            <ListOrdered className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-bold text-secondary mb-2">Coming Soon</h3>
+            <p className="text-muted-foreground">
+              Reservation management will be available in a future update.
+            </p>
+          </div>
         </TabsContent>
 
         {/* History Tab */}
