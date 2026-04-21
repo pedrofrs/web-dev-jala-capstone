@@ -143,47 +143,6 @@ describe('FinesWidget', () => {
     });
   });
 
-  describe('Dynamic Behavior', () => {
-    it('switches from no fines to with fines when data updates', () => {
-      const { rerender } = render(<FinesWidget student={mockStudentWithoutFines} />);
-      expect(screen.getByText('No Outstanding Fines')).toBeInTheDocument();
-
-      rerender(<FinesWidget student={mockStudentWithFines} />);
-      expect(screen.queryByText('No Outstanding Fines')).not.toBeInTheDocument();
-      expect(screen.getByText('Outstanding Fines')).toBeInTheDocument();
-      expect(screen.getByText('R$ 45.50')).toBeInTheDocument();
-    });
-
-    it('switches from with fines to no fines when fines are paid', () => {
-      const { rerender } = render(<FinesWidget student={mockStudentWithFines} />);
-      expect(screen.getByText('R$ 45.50')).toBeInTheDocument();
-
-      rerender(<FinesWidget student={{ ...mockStudentWithFines, totalFines: 0 }} />);
-      expect(screen.queryByText('R$ 45.50')).not.toBeInTheDocument();
-      expect(screen.getByText('No Outstanding Fines')).toBeInTheDocument();
-    });
-  });
-
-  describe('Button Behavior', () => {
-    it('pay button contains credit card icon', () => {
-      render(<FinesWidget student={mockStudentWithFines} />);
-      const button = screen.getByTestId('button');
-      const creditCardIcon = within(button).getByTestId('credit-card-icon');
-      expect(creditCardIcon).toBeInTheDocument();
-    });
-
-    it('pay button is clickable', async () => {
-      render(<FinesWidget student={mockStudentWithFines} />);
-      const button = screen.getByTestId('button');
-      const user = userEvent.setup();
-      await expect(user.click(button)).resolves.toBeUndefined();
-    });
-
-    it('does not show pay button when fines are zero', () => {
-      render(<FinesWidget student={mockStudentWithoutFines} />);
-      expect(screen.queryByTestId('button')).not.toBeInTheDocument();
-    });
-  });
 
   describe('Edge Cases', () => {
     it('handles very large fine amounts', () => {

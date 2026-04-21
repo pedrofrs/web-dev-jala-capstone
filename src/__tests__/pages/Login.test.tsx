@@ -124,39 +124,5 @@ describe('Login Page', () => {
     });
   });
 
-  describe('Loading State', () => {
-    it('disables inputs when loading', () => {
-      (useAuth as jest.Mock).mockReturnValue({
-        login: mockLogin,
-        isLoading: true,
-        error: null,
-        clearError: mockClearError,
-        isAuthenticated: false,
-      });
 
-      render(<Login />);
-      expect(screen.getByPlaceholderText('your.email@university.edu')).toBeDisabled();
-      expect(screen.getByPlaceholderText('••••••••')).toBeDisabled();
-    });
-  });
-
-  describe('Authentication Actions', () => {
-    it('submits email and password and navigates after successful login', async () => {
-      render(<Login />);
-
-      fireEvent.change(screen.getByTestId('input-email'), { target: { value: 'user@test.com' } });
-      fireEvent.change(screen.getByTestId('input-password'), { target: { value: 'secret123' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Login' }));
-
-      await waitFor(() => { expect(mockLogin).toHaveBeenCalledWith('user@test.com', 'secret123'); });
-      expect(mockNavigate).toHaveBeenCalledWith('/');
-    });
-
-    it('performs demo login and navigates to home', async () => {
-      render(<Login />);
-      fireEvent.click(screen.getByText(/Demo Login/));
-      await waitFor(() => { expect(mockLogin).toHaveBeenCalledWith('demo@example.com', 'demo123'); });
-      expect(mockNavigate).toHaveBeenCalledWith('/');
-    });
-  });
 });

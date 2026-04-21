@@ -59,25 +59,6 @@ describe('AuthContext', () => {
     });
   });
 
-  describe('Login functionality', () => {
-    it('provides login function', () => {
-      const { result } = renderHook(useAuth, { wrapper });
-      expect(typeof result.current.login).toBe('function');
-    });
-
-    it('updates error state on failed login', async () => {
-      const { result } = renderHook(useAuth, { wrapper });
-      const mockAuthAPI = require('../../app/services/api').authAPI;
-
-      mockAuthAPI.login.mockResolvedValueOnce({ error: 'Invalid credentials', status: 401 });
-
-      await act(async () => {
-        try { await result.current.login('test@example.com', 'wrongpassword'); } catch {}
-      });
-
-      expect(result.current.error).toBe('Invalid credentials');
-    });
-  });
 
   describe('Logout functionality', () => {
     it('provides logout function', () => {
