@@ -1,6 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Calendar, FileText, Hash, User, MapPin, Award, Building2, Download, BookOpen } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  FileText,
+  User,
+  MapPin,
+  Award,
+  Building2,
+  Download,
+  BookOpen,
+  BookMarked,
+  Heart,
+} from 'lucide-react';
 import { Book } from '../lib/data';
 import { getBookDetails } from '../services/googleBooksApi';
 import { adaptGoogleBooksVolumeToBook } from '../services/bookAdapter';
@@ -12,13 +24,24 @@ import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group';
 import { Progress } from '../components/ui/progress';
 import { Card } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
+import {
+  isInLibrary,
+  isInWishlist,
+  addToLibrary,
+  removeFromLibrary,
+  addToWishlist,
+  removeFromWishlist,
+} from '../services/localStorageService';
+import { borrowBook, isAlreadyBorrowed } from '../services/loanService';
 
 export default function BookDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [book, setBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [readingStatus, setReadingStatus] = useState<string>('reading');
+  const [isBorrowed, setIsBorrowed] = useState(false);
+  const [inLibrary, setInLibrary] = useState(false);
+  const [inWishlist, setInWishlist] = useState(false);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -30,6 +53,9 @@ export default function BookDetails() {
         if (volumeData) {
           const adaptedBook = adaptGoogleBooksVolumeToBook(volumeData);
           setBook(adaptedBook);
+          setInLibrary(isInLibrary(adaptedBook.id));
+          setInWishlist(isInWishlist(adaptedBook.id));
+          setIsBorrowed(isAlreadyBorrowed(adaptedBook.id));
         }
       } catch (error) {
         console.error('Failed to fetch book details:', error);
@@ -40,6 +66,68 @@ export default function BookDetails() {
 
     fetchBook();
   }, [id]);
+
+  function handleToggleLibrary() {
+    if (!book) return;
+    if (inLibrary) {
+      removeFromLibrary(book.id);
+      setInLibrary(false);
+    } else {
+      addToLibrary(book);
+      setInLibrary(true);
+      // Remove from wishlist if being added to library
+      if (inWishlist) {
+        removeFromWishlist(book.id);
+        setInWishlist(false);
+      }
+    }
+  }
+
+  function handleToggleWishlist() {
+    if (!book) return;
+    if (inWishlist) {
+      removeFromWishlist(book.id);
+      setInWishlist(false);
+    } else {
+      addToWishlist(book);
+      setInWishlist(true);
+      // Remove from library if being added to wishlist
+      if (inLibrary) {
+        removeFromLibrary(book.id);
+        setInLibrary(false);
+      }
+    }
+  }
+
+  function handleBorrow() {
+    if (!book || isBorrowed) return;
+    borrowBook(book);
+    setIsBorrowed(true);
+    navigate('/my-library', { state: { tab: 'loans' } });
+  }
+
+  // Derives the reading-status toggle value from localStorage state
+  const readingStatus = inLibrary ? 'library' : inWishlist ? 'wishlist' : 'none';
+
+  function handleReadingStatusChange(value: string) {
+    if (!value || !book) return;
+    if (value === 'library') {
+      addToLibrary(book);
+      setInLibrary(true);
+      removeFromWishlist(book.id);
+      setInWishlist(false);
+    } else if (value === 'wishlist') {
+      addToWishlist(book);
+      setInWishlist(true);
+      removeFromLibrary(book.id);
+      setInLibrary(false);
+    } else {
+      removeFromLibrary(book.id);
+      removeFromWishlist(book.id);
+      setInLibrary(false);
+      setInWishlist(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -67,8 +155,7 @@ export default function BookDetails() {
       const returnDate = new Date('2026-03-20');
       const today = new Date('2026-03-07');
       const diffTime = returnDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
     return null;
   };
@@ -130,9 +217,7 @@ export default function BookDetails() {
                 )}
               </div>
 
-              <h1 className="text-4xl font-bold text-secondary">
-                {book.title}
-              </h1>
+              <h1 className="text-4xl font-bold text-secondary">{book.title}</h1>
 
               <div className="flex flex-wrap gap-6 text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -150,14 +235,32 @@ export default function BookDetails() {
               </div>
             </div>
 
+            {/* Quick action buttons */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className={`flex-1 gap-2 ${inLibrary ? 'bg-primary text-primary-foreground hover:bg-primary/90 border-primary' : ''}`}
+                onClick={handleToggleLibrary}
+              >
+                <BookMarked className="w-4 h-4" />
+                {inLibrary ? 'Na Minha Biblioteca' : 'Adicionar à Biblioteca'}
+              </Button>
+              <Button
+                variant="outline"
+                className={`flex-1 gap-2 ${inWishlist ? 'bg-rose-500 text-white hover:bg-rose-600 border-rose-500' : ''}`}
+                onClick={handleToggleWishlist}
+              >
+                <Heart className={`w-4 h-4 ${inWishlist ? 'fill-current' : ''}`} />
+                {inWishlist ? 'Na Wishlist' : 'Adicionar à Wishlist'}
+              </Button>
+            </div>
+
             <Separator />
 
             {/* Description */}
             <div className="space-y-2">
               <h3 className="font-bold text-secondary">Description</h3>
-              <p className="text-foreground leading-relaxed">
-                {book.description}
-              </p>
+              <p className="text-foreground leading-relaxed">{book.description}</p>
             </div>
 
             <Separator />
@@ -201,7 +304,7 @@ export default function BookDetails() {
 
             <Separator />
 
-            {/* Physical Location Map */}
+            {/* Physical Location */}
             <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -258,9 +361,7 @@ export default function BookDetails() {
             {book.courseReserve && book.courseReserve.length > 0 && (
               <Card className="p-4 bg-warning/10 border-warning/20">
                 <div className="space-y-2">
-                  <p className="font-semibold text-secondary">
-                    Required Reading For:
-                  </p>
+                  <p className="font-semibold text-secondary">Required Reading For:</p>
                   <div className="flex flex-wrap gap-2">
                     {book.courseReserve.map((course) => (
                       <Badge
@@ -279,7 +380,7 @@ export default function BookDetails() {
             {/* Citation Tool */}
             <div className="flex gap-3">
               <CitationDialog book={book} />
-              {book.availabilityType === 'digital' || book.availabilityType === 'both' && (
+              {(book.availabilityType === 'digital' || book.availabilityType === 'both') && (
                 <Button variant="outline" className="gap-2">
                   <Download className="w-4 h-4" />
                   Access Digital
@@ -289,23 +390,25 @@ export default function BookDetails() {
 
             <Separator />
 
-            {/* Reading Status Tracker */}
+            {/* Reading Status Tracker — synced with localStorage */}
             <div className="space-y-4 p-6 bg-accent rounded-lg">
               <h3 className="font-bold text-secondary">Reading Status</h3>
               <ToggleGroup
                 type="single"
                 value={readingStatus}
-                onValueChange={(value) => value && setReadingStatus(value)}
+                onValueChange={handleReadingStatusChange}
                 className="justify-start"
               >
-                <ToggleGroupItem value="reading" className="px-6">
-                  Reading
-                </ToggleGroupItem>
-                <ToggleGroupItem value="completed" className="px-6">
-                  Completed
+                <ToggleGroupItem value="library" className="px-6">
+                  <BookMarked className="w-4 h-4 mr-2" />
+                  Minha Biblioteca
                 </ToggleGroupItem>
                 <ToggleGroupItem value="wishlist" className="px-6">
+                  <Heart className="w-4 h-4 mr-2" />
                   Wishlist
+                </ToggleGroupItem>
+                <ToggleGroupItem value="none" className="px-6">
+                  Nenhum
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
@@ -313,8 +416,12 @@ export default function BookDetails() {
             {/* Loan Action Area */}
             <div className="space-y-4 p-6 bg-card border border-border rounded-lg">
               {book.status === 'available' && (
-                <Button className="w-full h-12 bg-primary hover:bg-primary/90">
-                  Borrow This Book
+                <Button
+                  className="w-full h-12 bg-primary hover:bg-primary/90 disabled:opacity-70"
+                  onClick={handleBorrow}
+                  disabled={isBorrowed}
+                >
+                  {isBorrowed ? 'Já emprestado — ver em Minha Biblioteca' : 'Borrow This Book'}
                 </Button>
               )}
 
@@ -322,14 +429,10 @@ export default function BookDetails() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Return in {daysRemaining} days</span>
-                    <Badge className="bg-warning text-warning-foreground">
-                      Due Soon
-                    </Badge>
+                    <Badge className="bg-warning text-warning-foreground">Due Soon</Badge>
                   </div>
                   <Progress value={(13 / 28) * 100} className="h-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Return date: March 20, 2026
-                  </p>
+                  <p className="text-sm text-muted-foreground">Return date: March 20, 2026</p>
                   <Button className="w-full" variant="outline">
                     Reserve This Book
                   </Button>
@@ -342,8 +445,7 @@ export default function BookDetails() {
                     Currently Reserved
                   </Badge>
                   <p className="text-sm text-muted-foreground text-center">
-                    This book is reserved. You'll be notified when it becomes
-                    available.
+                    This book is reserved. You'll be notified when it becomes available.
                   </p>
                   <Button className="w-full" disabled>
                     Reserve This Book
