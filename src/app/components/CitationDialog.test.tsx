@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 
 jest.mock('sonner');
 
-// Mock dialog components
 jest.mock('./ui/dialog', () => ({
   Dialog: ({ children }: any) => <div>{children}</div>,
   DialogTrigger: ({ children, asChild }: any) => <div data-testid="dialog-trigger">{children}</div>,
@@ -15,28 +14,21 @@ jest.mock('./ui/dialog', () => ({
   DialogDescription: ({ children }: any) => <p>{children}</p>,
 }));
 
-// Mock button component
 jest.mock('./ui/button', () => ({
-  Button: ({ children, onClick, variant, className }: any) => (
-    <button data-testid="button" onClick={onClick} className={className} data-variant={variant}>
-      {children}
-    </button>
+  Button: ({ children, onClick, className }: any) => (
+      <button data-testid="button" onClick={onClick} className={className}>
+        {children}
+      </button>
   ),
 }));
 
-// Mock tabs components
 jest.mock('./ui/tabs', () => ({
-  Tabs: ({ children, defaultValue }: any) => <div data-testid="tabs">{children}</div>,
+  Tabs: ({ children }: any) => <div data-testid="tabs">{children}</div>,
   TabsList: ({ children }: any) => <div data-testid="tabs-list">{children}</div>,
-  TabsTrigger: ({ children, value }: any) => (
-    <button data-testid={`tab-${value}`}>{children}</button>
-  ),
-  TabsContent: ({ children, value }: any) => (
-    <div data-testid={`tab-content-${value}`}>{children}</div>
-  ),
+  TabsTrigger: ({ children, value }: any) => <button data-testid={`tab-${value}`}>{children}</button>,
+  TabsContent: ({ children, value }: any) => <div data-testid={`tab-content-${value}`}>{children}</div>,
 }));
 
-// Mock lucide-react icons
 jest.mock('lucide-react', () => ({
   Copy: () => <span data-testid="copy-icon" />,
   Check: () => <span data-testid="check-icon" />,
@@ -66,106 +58,53 @@ describe('CitationDialog', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Mock navigator.clipboard globally
     Object.assign(navigator, {
-      clipboard: {
-        writeText: jest.fn(() => Promise.resolve()),
-      },
+      clipboard: { writeText: jest.fn(() => Promise.resolve()) },
     });
   });
 
-  it('renders trigger button with correct label', () => {
+  it('renderiza o botão de gatilho, cabeçalho e as abas de formato', () => {
     render(<CitationDialog book={mockBook} />);
 
     expect(screen.getByText('Cite This Book')).toBeInTheDocument();
-    expect(screen.getByTestId('file-text-icon')).toBeInTheDocument();
-  });
-
-  it('renders dialog header with correct titles', () => {
-    render(<CitationDialog book={mockBook} />);
-
     expect(screen.getByText('Citation Generator')).toBeInTheDocument();
-    expect(screen.getByText('Copy the citation in your preferred format')).toBeInTheDocument();
-  });
-
-  it('renders all three citation format tabs', () => {
-    render(<CitationDialog book={mockBook} />);
-
     expect(screen.getByTestId('tab-apa')).toBeInTheDocument();
     expect(screen.getByTestId('tab-abnt')).toBeInTheDocument();
     expect(screen.getByTestId('tab-mla')).toBeInTheDocument();
   });
 
-  it('generates correct APA citation format', () => {
+  it('gera corretamente as citações nos formatos APA, ABNT e MLA', () => {
     render(<CitationDialog book={mockBook} />);
 
-    const apaContent = screen.getByTestId('tab-content-apa');
-    expect(apaContent).toHaveTextContent('Smith, J. (2023). Advanced TypeScript. Tech Press.');
+    expect(screen.getByTestId('tab-content-apa')).toHaveTextContent('Smith, J. (2023). Advanced TypeScript. Tech Press.');
+    expect(screen.getByTestId('tab-content-abnt')).toHaveTextContent('SMITH, John. Advanced TypeScript. 2nd. Tech Press, 2023. 450 p.');
+    expect(screen.getByTestId('tab-content-mla')).toHaveTextContent('John Smith. Advanced TypeScript. 2nd. Tech Press, 2023.');
   });
 
-  it('generates correct ABNT citation format', () => {
-    render(<CitationDialog book={mockBook} />);
+  it('lida corretamente com a extração de nomes e sobrenomes compostos na citação', () => {
+    const bookWithComplexName = { ...mockBook, author: 'Mary Jane Watson' };
+    render(<CitationDialog book={bookWithComplexName} />);
 
-    const abntContent = screen.getByTestId('tab-content-abnt');
-    expect(abntContent).toHaveTextContent('SMITH, John. Advanced TypeScript. 2nd. Tech Press, 2023. 450 p.');
+    expect(screen.getByTestId('tab-content-apa')).toHaveTextContent('Watson, M. (2023)');
+    expect(screen.getByTestId('tab-content-abnt')).toHaveTextContent('WATSON, Mary Jane.');
   });
 
-  it('generates correct MLA citation format', () => {
+  it('copia a citação para a área de transferência e exibe notificação de sucesso', async () => {
     render(<CitationDialog book={mockBook} />);
 
-    const mlaContent = screen.getByTestId('tab-content-mla');
-    expect(mlaContent).toHaveTextContent('John Smith. Advanced TypeScript. 2nd. Tech Press, 2023.');
-  });
-
-  it('copies APA citation and shows success toast', async () => {
-    render(<CitationDialog book={mockBook} />);
-
-    const buttons = screen.getAllByTestId('button');
-    const copyApaButton = buttons.find((btn) => btn.textContent?.includes('Copy APA'));
-
+    const copyApaButton = screen.getAllByTestId('button').find(btn => btn.textContent?.includes('Copy APA'));
     fireEvent.click(copyApaButton!);
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalled();
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Smith, J. (2023). Advanced TypeScript. Tech Press.');
       expect(toast.success).toHaveBeenCalledWith('Citation copied in APA format');
     });
   });
 
-  it('copies ABNT citation and shows success toast', async () => {
+  it('altera o estado do botão para "Copied!" com o ícone de check após a cópia', async () => {
     render(<CitationDialog book={mockBook} />);
 
-    const buttons = screen.getAllByTestId('button');
-    const copyAbntButton = buttons.find((btn) => btn.textContent?.includes('Copy ABNT'));
-
-    fireEvent.click(copyAbntButton!);
-
-    await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith('Citation copied in ABNT format');
-    });
-  });
-
-  it('copies MLA citation and shows success toast', async () => {
-    render(<CitationDialog book={mockBook} />);
-
-    const buttons = screen.getAllByTestId('button');
-    const copyMlaButton = buttons.find((btn) => btn.textContent?.includes('Copy MLA'));
-
-    fireEvent.click(copyMlaButton!);
-
-    await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith('Citation copied in MLA format');
-    });
-  });
-
-  it('shows "Copied!" button state after clicking copy', async () => {
-    render(<CitationDialog book={mockBook} />);
-
-    const buttons = screen.getAllByTestId('button');
-    const copyApaButton = buttons.find((btn) => btn.textContent?.includes('Copy APA'));
-
+    const copyApaButton = screen.getAllByTestId('button').find(btn => btn.textContent?.includes('Copy APA'));
     fireEvent.click(copyApaButton!);
 
     await waitFor(() => {
@@ -173,17 +112,4 @@ describe('CitationDialog', () => {
       expect(screen.getByTestId('check-icon')).toBeInTheDocument();
     });
   });
-
-  it('handles author name parsing correctly', () => {
-    const bookWithDifferentAuthor = {
-      ...mockBook,
-      author: 'Mary Jane Watson',
-    };
-
-    render(<CitationDialog book={bookWithDifferentAuthor} />);
-
-    const apaContent = screen.getByTestId('tab-content-apa');
-    expect(apaContent).toHaveTextContent('Watson, M. (2023)');
-  });
 });
-

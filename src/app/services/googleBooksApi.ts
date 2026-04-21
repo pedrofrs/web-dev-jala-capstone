@@ -3,9 +3,12 @@
  * Handles search and retrieval of books from Google Books API
  */
 
-const API_KEY = (import.meta as any).env?.VITE_GOOGLE_BOOKS_API_KEY || 'AIzaSyAaDcnbhnvUiHgnlj01J1Bq93mcA8z8oD8';
+const API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/books/v1';
 
+if (!API_KEY) {
+  console.error('ERRO: VITE_GOOGLE_BOOKS_API_KEY não foi encontrada. Verifique seu arquivo .env e reinicie o servidor do Vite.');
+}
 // Cache for search results
 const searchCache = new Map<string, any>();
 

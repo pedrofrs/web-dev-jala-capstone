@@ -8,9 +8,6 @@ export function Sidebar() {
     { to: '/', label: 'Explore', icon: Library },
     { to: '/my-library', label: 'My Library', icon: BookOpen },
     { to: '/wishlist', label: 'Wishlist', icon: Heart, badge: 2 },
-    { to: '/study-rooms', label: 'Study Rooms', icon: DoorOpen },
-    { to: '/databases', label: 'Research Databases', icon: Database },
-    { to: '/form', label: 'Form', icon: FileText },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
 

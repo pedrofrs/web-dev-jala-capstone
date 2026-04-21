@@ -1,6 +1,3 @@
-/**
- * User Menu Component Tests
- */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UserMenu } from './UserMenu';
@@ -13,7 +10,6 @@ jest.mock('react-router', () => ({
   useNavigate: jest.fn(),
 }));
 
-// Mock the entire api module before importing
 jest.mock('../services/api', () => ({
   authAPI: {
     login: jest.fn(),

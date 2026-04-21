@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, BookMarked } from 'lucide-react';
+import { Search, BookMarked, Loader2 } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { BookCard, BookCardSkeleton } from '../components/BookCard';
@@ -32,26 +32,33 @@ export default function Dashboard() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('title');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
+  const [startIndex, setStartIndex] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
   const [activeTab, setActiveTab] = useState('catalog');
 
   // Fetch books when search query changes or on initial load
   useEffect(() => {
     const fetchBooks = async () => {
-      const queryToUse = searchQuery.trim() || 'programming'; // Default search if empty
+      const queryToUse = searchQuery.trim() || 'programming';
 
       setIsLoading(true);
+      setStartIndex(0);
       try {
         const response = await searchBooks(queryToUse, 0);
         if (response.items) {
-          const adaptedBooks = adaptGoogleBooksVolumesToBooks(response.items);
-          setBooks(adaptedBooks);
+          setBooks(adaptGoogleBooksVolumesToBooks(response.items));
+          setTotalItems(response.totalItems);
+          setStartIndex(response.items.length);
         } else {
           setBooks([]);
+          setTotalItems(0);
         }
       } catch (error) {
         console.error('Failed to fetch books:', error);
         setBooks([]);
+        setTotalItems(0);
       } finally {
         setIsLoading(false);
       }
@@ -59,6 +66,24 @@ export default function Dashboard() {
 
     fetchBooks();
   }, [searchQuery]);
+
+  async function handleLoadMore() {
+    const queryToUse = searchQuery.trim() || 'programming';
+    setIsLoadingMore(true);
+    try {
+      const response = await searchBooks(queryToUse, startIndex);
+      if (response.items) {
+        setBooks((prev) => [...prev, ...adaptGoogleBooksVolumesToBooks(response.items!)]);
+        setStartIndex((prev) => prev + response.items!.length);
+      }
+    } catch (error) {
+      console.error('Failed to load more books:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  const hasMore = books.length < totalItems;
 
   const filteredAndSortedBooks = useMemo(() => {
     let filtered = books;
@@ -196,6 +221,20 @@ export default function Dashboard() {
                     <BookCard key={book.id} book={book} />
                   ))}
             </div>
+
+            {!isLoading && hasMore && filteredAndSortedBooks.length > 0 && (
+              <div className="flex justify-center mt-8">
+                <Button
+                  variant="outline"
+                  className="px-8 gap-2"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isLoadingMore ? 'Carregando...' : 'Carregar mais livros'}
+                </Button>
+              </div>
+            )}
 
             {!isLoading && filteredAndSortedBooks.length === 0 && (
               <Card className="text-center py-16">

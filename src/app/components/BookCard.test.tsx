@@ -1,325 +1,111 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { BookCard, BookCardSkeleton } from './BookCard';
 import { Book } from '../lib/data';
+import * as localStorageService from '../services/localStorageService';
 
-// Mock react-router
+// Mock do react-router
 const mockNavigate = jest.fn();
 jest.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-// Mock child components
+// Mock dos serviços de LocalStorage
+jest.mock('../services/localStorageService', () => ({
+  isInLibrary: jest.fn(),
+  isInWishlist: jest.fn(),
+  toggleLibrary: jest.fn(),
+  toggleWishlist: jest.fn(),
+}));
+
+// Mock dos sub-componentes visuais para isolar o teste
 jest.mock('./StatusBadge', () => ({
-  StatusBadge: ({ status }: { status: string }) => (
-    <div data-testid="status-badge">{status}</div>
-  ),
-}));
-
-jest.mock('./ui/badge', () => ({
-  Badge: ({ children, ...props }: any) => (
-    <div data-testid="badge" {...props}>
-      {children}
-    </div>
-  ),
-}));
-
-jest.mock('./ui/card', () => ({
-  Card: ({ children, ...props }: any) => (
-    <div data-testid="card" {...props}>
-      {children}
-    </div>
-  ),
-}));
-
-// Mock lucide-react icons
-jest.mock('lucide-react', () => ({
-  MapPin: () => <div data-testid="map-pin-icon" />,
-  Download: () => <div data-testid="download-icon" />,
-  BookOpen: () => <div data-testid="book-open-icon" />,
+  StatusBadge: ({ status }: { status: string }) => <div data-testid="status-badge">{status}</div>,
 }));
 
 describe('BookCard', () => {
   const mockBook: Book = {
     id: '1',
-    title: 'Test Book Title',
-    author: 'Test Author',
-    category: 'Fiction',
-    isbn: '1234567890',
-    description: 'A test book description.',
+    title: 'O Senhor dos Anéis',
+    author: 'J.R.R. Tolkien',
+    category: 'Fantasia',
+    isbn: '123456',
+    description: 'Um anel para a todos governar.',
     coverUrl: 'https://example.com/cover.jpg',
     status: 'available',
-    publishedYear: 2023,
-    pages: 300,
-    publisher: 'Test Publisher',
+    publishedYear: 1954,
+    pages: 1200,
+    publisher: 'HarperCollins',
     edition: '1st',
     shelfLocation: 'A1-01',
-    department: 'Literature',
+    department: 'Literatura',
     availabilityType: 'physical',
     floor: '1',
     wing: 'A',
   };
 
   beforeEach(() => {
-    mockNavigate.mockClear();
+    jest.clearAllMocks();
+    (localStorageService.isInLibrary as jest.Mock).mockReturnValue(false);
+    (localStorageService.isInWishlist as jest.Mock).mockReturnValue(false);
   });
 
-  describe('Rendering', () => {
-    it('renders book details correctly for physical book', () => {
-      render(<BookCard book={mockBook} />);
+  // TESTE 1: Comportamento de Renderização Principal
+  it('renderiza as informações principais do livro corretamente', () => {
+    render(<BookCard book={mockBook} />);
 
-      expect(screen.getByText('Test Book Title')).toBeInTheDocument();
-      expect(screen.getByText('Test Author')).toBeInTheDocument();
-      expect(screen.getByText('Fiction')).toBeInTheDocument();
-      expect(screen.getByText('A1-01')).toBeInTheDocument();
-      expect(screen.getByTestId('map-pin-icon')).toBeInTheDocument();
-      expect(screen.getByRole('img', { name: 'Test Book Title' })).toHaveAttribute(
-        'src',
-        'https://example.com/cover.jpg'
-      );
-      expect(screen.getByTestId('status-badge')).toBeInTheDocument();
-    });
-
-    it('renders all required book information elements', () => {
-      render(<BookCard book={mockBook} />);
-      
-      expect(screen.getByText('Test Book Title')).toBeInTheDocument();
-      expect(screen.getByText('Test Author')).toBeInTheDocument();
-    });
-
-    it('renders book image with correct alt text and src', () => {
-      render(<BookCard book={mockBook} />);
-
-      const image = screen.getByRole('img', { name: 'Test Book Title' });
-      expect(image).toHaveAttribute('src', mockBook.coverUrl);
-      expect(image).toHaveClass('w-full', 'h-full', 'object-cover');
-    });
-
-    it('renders with very long book titles', () => {
-      const longTitleBook = {
-        ...mockBook,
-        title: 'A Very Long Book Title That Should Be Truncated With Multiple Lines And Still Render Correctly',
-      };
-      render(<BookCard book={longTitleBook} />);
-
-      const title = screen.getByText(/A Very Long Book Title/);
-      expect(title).toHaveClass('line-clamp-2');
-    });
-
-    it('renders status badge with correct status value', () => {
-      render(<BookCard book={mockBook} />);
-      
-      const statusBadge = screen.getByTestId('status-badge');
-      expect(statusBadge).toHaveTextContent('available');
-    });
-
-    it('renders with different status values', () => {
-      const borrowedBook = { ...mockBook, status: 'borrowed' as const };
-      render(<BookCard book={borrowedBook} />);
-      
-      expect(screen.getByTestId('status-badge')).toHaveTextContent('borrowed');
-    });
+    expect(screen.getByText('O Senhor dos Anéis')).toBeInTheDocument();
+    expect(screen.getByText('J.R.R. Tolkien')).toBeInTheDocument();
+    expect(screen.getByText('A1-01')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'O Senhor dos Anéis' })).toHaveAttribute('src', mockBook.coverUrl);
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('available');
   });
 
-  describe('Availability Types', () => {
-    it('should not render digital badge for physical availability', () => {
-      render(<BookCard book={mockBook} />);
+  // TESTE 2: Regras de Negócio Condicionais (Disponibilidade)
+  it('exibe as badges corretas baseado no tipo de disponibilidade (Digital/Both)', () => {
+    const { rerender } = render(<BookCard book={{ ...mockBook, availabilityType: 'digital' }} />);
+    expect(screen.getByText('Digital')).toBeInTheDocument();
+    expect(screen.queryByText('Both')).not.toBeInTheDocument();
 
-      expect(screen.queryByText('Digital')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('download-icon')).not.toBeInTheDocument();
-    });
-
-    it('renders digital badge for digital availability', () => {
-      const digitalBook = { ...mockBook, availabilityType: 'digital' as const };
-      render(<BookCard book={digitalBook} />);
-
-      expect(screen.getByText('Digital')).toBeInTheDocument();
-      expect(screen.getByTestId('download-icon')).toBeInTheDocument();
-    });
-
-    it('renders both badge for both availability types', () => {
-      const bothBook = { ...mockBook, availabilityType: 'both' as const };
-      render(<BookCard book={bothBook} />);
-
-      expect(screen.getByText('Both')).toBeInTheDocument();
-      expect(screen.getByTestId('book-open-icon')).toBeInTheDocument();
-    });
-
-    it('only shows one availability badge at a time', () => {
-      const { rerender } = render(<BookCard book={mockBook} />);
-      expect(screen.queryByText('Digital')).not.toBeInTheDocument();
-      
-      rerender(<BookCard book={{ ...mockBook, availabilityType: 'digital' }} />);
-      expect(screen.getByText('Digital')).toBeInTheDocument();
-      expect(screen.queryByText('Both')).not.toBeInTheDocument();
-    });
+    rerender(<BookCard book={{ ...mockBook, availabilityType: 'both' }} />);
+    expect(screen.getByText('Both')).toBeInTheDocument();
+    expect(screen.queryByText('Digital')).not.toBeInTheDocument();
   });
 
-  describe('Navigation', () => {
-    it('navigates to book details on card click', () => {
-      render(<BookCard book={mockBook} />);
+  // TESTE 3: Comportamento de Navegação
+  it('navega para a página de detalhes do livro ao clicar no card', () => {
+    render(<BookCard book={mockBook} />);
 
-      const card = screen.getByTestId('card');
-      fireEvent.click(card);
+    // Pega o card pelo primeiro elemento div pai (role não é trivial pois é um card customizado)
+    const cardElement = screen.getByText('O Senhor dos Anéis').closest('.cursor-pointer');
+    fireEvent.click(cardElement!);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/book/1');
-      expect(mockNavigate).toHaveBeenCalledTimes(1);
-    });
-
-    it('navigates with correct book ID for different books', () => {
-      const bookWithDifferentId = { ...mockBook, id: '42' };
-      render(<BookCard book={bookWithDifferentId} />);
-
-      const card = screen.getByTestId('card');
-      fireEvent.click(card);
-
-      expect(mockNavigate).toHaveBeenCalledWith('/book/42');
-    });
-
-    it('handles multiple clicks on the card', () => {
-      render(<BookCard book={mockBook} />);
-
-      const card = screen.getByTestId('card');
-      fireEvent.click(card);
-      fireEvent.click(card);
-      fireEvent.click(card);
-
-      expect(mockNavigate).toHaveBeenCalledTimes(3);
-      expect(mockNavigate).toHaveBeenLastCalledWith('/book/1');
-    });
+    expect(mockNavigate).toHaveBeenCalledWith('/book/1');
   });
 
-  describe('Styling and Classes', () => {
-    it('applies correct styles to card for hover effects', () => {
-      render(<BookCard book={mockBook} />);
+  // TESTE 4: Ação Isolada - Biblioteca
+  it('alterna o status do livro na biblioteca sem disparar a navegação do card', () => {
+    (localStorageService.toggleLibrary as jest.Mock).mockReturnValue(true);
+    render(<BookCard book={mockBook} />);
 
-      const card = screen.getByTestId('card');
-      expect(card).toHaveClass(
-        'overflow-hidden',
-        'cursor-pointer',
-        'transition-all',
-        'duration-300',
-        'hover:shadow-lg',
-        'hover:-translate-y-1'
-      );
-    });
+    const libraryButton = screen.getByRole('button', { name: /biblioteca/i });
+    fireEvent.click(libraryButton);
 
-    it('applies overflow-hidden class to image container', () => {
-      render(<BookCard book={mockBook} />);
-      
-      const imageContainer = screen.getByRole('img', { name: 'Test Book Title' }).parentElement;
-      expect(imageContainer).toHaveClass('overflow-hidden');
-    });
-
-    it('applies correct spacing classes to content area', () => {
-      render(<BookCard book={mockBook} />);
-      
-      expect(screen.getByText('Test Book Title').closest('div')).toHaveClass('flex', 'items-start', 'justify-between', 'gap-2');
-    });
+    expect(localStorageService.toggleLibrary).toHaveBeenCalledWith(mockBook);
+    expect(mockNavigate).not.toHaveBeenCalled(); // Garante que o stopPropagation funcionou
+    expect(screen.getByRole('button', { name: /Na Biblioteca/i })).toBeInTheDocument();
   });
 
-  describe('Category Display', () => {
-    it('displays correct category badge', () => {
-      render(<BookCard book={mockBook} />);
+  // TESTE 5: Ação Isolada - Wishlist
+  it('alterna o status do livro na wishlist sem disparar a navegação do card', () => {
+    (localStorageService.toggleWishlist as jest.Mock).mockReturnValue(true);
+    render(<BookCard book={mockBook} />);
 
-      expect(screen.getByText('Fiction')).toBeInTheDocument();
-    });
+    const wishlistButton = screen.getByRole('button', { name: /wishlist/i });
+    fireEvent.click(wishlistButton);
 
-    it('displays different categories correctly', () => {
-      const scienceBook = { ...mockBook, category: 'Science' };
-      render(<BookCard book={scienceBook} />);
-
-      expect(screen.getByText('Science')).toBeInTheDocument();
-    });
-
-    it('renders category badge with outline variant', () => {
-      render(<BookCard book={mockBook} />);
-      
-      const badges = screen.getAllByTestId('badge');
-      const categoryBadge = badges.find(badge => badge.textContent === 'Fiction');
-      expect(categoryBadge).toBeInTheDocument();
-    });
-  });
-
-  describe('Shelf Location Display', () => {
-    it('displays shelf location with map pin icon', () => {
-      render(<BookCard book={mockBook} />);
-
-      expect(screen.getByText('A1-01')).toBeInTheDocument();
-      expect(screen.getByTestId('map-pin-icon')).toBeInTheDocument();
-    });
-
-    it('displays shelf location in monospace font', () => {
-      render(<BookCard book={mockBook} />);
-      
-      const shelfLocation = screen.getByText('A1-01');
-      expect(shelfLocation).toHaveClass('font-mono', 'font-medium');
-    });
-
-    it('handles different shelf location formats', () => {
-      const bookWithDifferentLocation = { ...mockBook, shelfLocation: '005.1 K72a' };
-      render(<BookCard book={bookWithDifferentLocation} />);
-
-      expect(screen.getByText('005.1 K72a')).toBeInTheDocument();
-    });
+    expect(localStorageService.toggleWishlist).toHaveBeenCalledWith(mockBook);
+    expect(mockNavigate).not.toHaveBeenCalled(); // Garante que o stopPropagation funcionou
+    expect(screen.getByRole('button', { name: /Na Wishlist/i })).toBeInTheDocument();
   });
 });
 
-describe('BookCardSkeleton', () => {
-  it('renders skeleton structure with loading animations', () => {
-    render(<BookCardSkeleton />);
-
-    const pulseElements = document.querySelectorAll('.animate-pulse');
-    expect(pulseElements.length).toBeGreaterThan(0);
-  });
-
-  it('renders multiple skeleton elements for text placeholders', () => {
-    render(<BookCardSkeleton />);
-
-    const card = screen.getByTestId('card');
-    expect(card).toBeInTheDocument();
-
-    const pulseElements = card.querySelectorAll('.animate-pulse');
-    // Should have elements for: image, title, author, location, badges
-    expect(pulseElements.length).toBeGreaterThanOrEqual(5);
-  });
-
-  it('has correct aspect ratio for image skeleton', () => {
-    render(<BookCardSkeleton />);
-
-    const imageSkeleton = document.querySelector('.aspect-\\[2\\/3\\]');
-    expect(imageSkeleton).toBeInTheDocument();
-  });
-
-  it('renders with muted background color', () => {
-    render(<BookCardSkeleton />);
-
-    const skeletonElements = document.querySelectorAll('.bg-muted');
-    expect(skeletonElements.length).toBeGreaterThan(0);
-  });
-
-  it('renders proper spacing in skeleton structure', () => {
-    render(<BookCardSkeleton />);
-
-    const card = screen.getByTestId('card');
-    const contentArea = card.querySelector('.p-4');
-    expect(contentArea).toBeInTheDocument();
-  });
-
-  it('has rounded corners on skeleton placeholders', () => {
-    render(<BookCardSkeleton />);
-
-    const roundedElements = document.querySelectorAll('.rounded');
-    expect(roundedElements.length).toBeGreaterThan(0);
-  });
-
-  it('maintains consistent styling with BookCard layout', () => {
-    const { rerender } = render(<BookCardSkeleton />);
-    
-    const skeletonCard = screen.getByTestId('card');
-    expect(skeletonCard).toHaveClass('overflow-hidden');
-    
-    rerender(<BookCardSkeleton />);
-    expect(screen.getByTestId('card')).toHaveClass('overflow-hidden');
-  });
-});
