@@ -27,6 +27,7 @@ const DEPARTMENTS = [
 ];
 
 export default function Dashboard() {
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
@@ -38,7 +39,6 @@ export default function Dashboard() {
   const [totalItems, setTotalItems] = useState(0);
   const [activeTab, setActiveTab] = useState('catalog');
 
-  // Fetch books when search query changes or on initial load
   useEffect(() => {
     const fetchBooks = async () => {
       const queryToUse = searchQuery.trim() || 'programming';
@@ -46,7 +46,7 @@ export default function Dashboard() {
       setIsLoading(true);
       setStartIndex(0);
       try {
-        const response = await searchBooks(queryToUse, 0);
+        const response = await searchBooks(queryToUse, 0, selectedCategory, sortBy);
         if (response.items) {
           setBooks(adaptGoogleBooksVolumesToBooks(response.items));
           setTotalItems(response.totalItems);
@@ -65,13 +65,13 @@ export default function Dashboard() {
     };
 
     fetchBooks();
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory, sortBy]);
 
   async function handleLoadMore() {
     const queryToUse = searchQuery.trim() || 'programming';
     setIsLoadingMore(true);
     try {
-      const response = await searchBooks(queryToUse, startIndex);
+      const response = await searchBooks(queryToUse, startIndex, selectedCategory, sortBy);
       if (response.items) {
         setBooks((prev) => [...prev, ...adaptGoogleBooksVolumesToBooks(response.items!)]);
         setStartIndex((prev) => prev + response.items!.length);
@@ -83,12 +83,17 @@ export default function Dashboard() {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setSearchQuery(searchInput);
+    }
+  };
+
   const hasMore = books.length < totalItems;
 
   const filteredAndSortedBooks = useMemo(() => {
     let filtered = books;
 
-    // Filter by search query (title, author, ISBN, DOI)
     if (searchQuery) {
       filtered = filtered.filter(
         (book) =>
@@ -99,36 +104,26 @@ export default function Dashboard() {
       );
     }
 
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((book) => book.category === selectedCategory);
-    }
-
-    // Filter by department
     if (selectedDepartment !== 'all') {
       filtered = filtered.filter((book) => book.department === selectedDepartment);
     }
 
-    // Sort
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
         case 'author':
           return a.author.localeCompare(b.author);
-        case 'year':
-          return b.publishedYear - a.publishedYear;
         default:
           return 0;
       }
     });
 
     return sorted;
-  }, [books, selectedCategory, selectedDepartment, sortBy]);
+  }, [books, searchQuery, selectedDepartment, sortBy]);
 
   return (
     <div className="min-h-screen p-8 space-y-8">
-      {/* Header */}
       <div className="space-y-2">
         <h1 className="text-4xl font-bold text-secondary">Academic Discovery</h1>
         <p className="text-muted-foreground">
@@ -136,19 +131,18 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Search Bar */}
       <div className="relative max-w-2xl">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search by title, author, ISBN, or DOI..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by title, author, ISBN, or DOI... (Press Enter to search)"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           className="pl-12 h-14 border-2 focus:border-primary transition-colors bg-input-background"
         />
       </div>
 
-      {/* Tabs for Catalog and Course Reserves */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="catalog">Full Catalog</TabsTrigger>
@@ -158,9 +152,7 @@ export default function Dashboard() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Full Catalog Tab */}
         <TabsContent value="catalog" className="space-y-6 mt-6">
-          {/* Filters and Sort */}
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((category) => (
@@ -207,7 +199,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Book Grid */}
           <div>
             <p className="text-sm text-muted-foreground mb-4">
               {filteredAndSortedBooks.length} books found
@@ -252,7 +243,6 @@ export default function Dashboard() {
           </div>
         </TabsContent>
 
-        {/* Course Reserves Tab */}
         <TabsContent value="course-reserves" className="space-y-6 mt-6">
           <div className="text-center py-16 bg-card rounded-lg">
             <BookMarked className="w-12 h-12 mx-auto text-muted-foreground mb-4" />

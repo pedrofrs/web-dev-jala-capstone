@@ -1,15 +1,10 @@
-/**
- * Google Books API Service
- * Handles search and retrieval of books from Google Books API
- */
-
 const API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/books/v1';
 
 if (!API_KEY) {
   console.error('ERRO: VITE_GOOGLE_BOOKS_API_KEY não foi encontrada. Verifique seu arquivo .env e reinicie o servidor do Vite.');
 }
-// Cache for search results
+
 const searchCache = new Map<string, any>();
 
 export interface GoogleBooksVolume {
@@ -79,20 +74,18 @@ export interface GoogleBooksSearchResponse {
   items?: GoogleBooksVolume[];
 }
 
-/**
- * Search for books using Google Books API
- */
 export const searchBooks = async (
   query: string,
-  startIndex: number = 0
+  startIndex: number = 0,
+  category: string = 'all',
+  sortBy: string = 'title'
 ): Promise<GoogleBooksSearchResponse> => {
   if (!query || query.trim() === '') {
     return { kind: 'books#volumes', totalItems: 0, items: [] };
   }
 
-  const cacheKey = `${query}:${startIndex}`;
+  const cacheKey = `${query}:${startIndex}:${category}:${sortBy}`;
   
-  // Check cache first
   if (searchCache.has(cacheKey)) {
     return searchCache.get(cacheKey);
   }
@@ -105,19 +98,30 @@ export const searchBooks = async (
     while (retries < maxRetries) {
       try {
         const url = new URL(`${BASE_URL}/volumes`);
-        url.searchParams.append('q', query);
+        
+        let finalQuery = query;
+        if (category !== 'all') {
+          finalQuery += `+subject:${category}`;
+        }
+
+        url.searchParams.append('q', finalQuery);
         url.searchParams.append('key', API_KEY);
         url.searchParams.append('startIndex', startIndex.toString());
         url.searchParams.append('maxResults', '40');
         url.searchParams.append('printType', 'books');
+        
+        if (sortBy === 'year') {
+           url.searchParams.append('orderBy', 'newest');
+        } else {
+           url.searchParams.append('orderBy', 'relevance');
+        }
 
         const response = await fetch(url.toString());
 
         if (response.status === 503) {
-          // Service Unavailable - retry with exponential backoff
           retries++;
           if (retries < maxRetries) {
-            const delay = Math.pow(2, retries) * 1000; // 2s, 4s, 8s
+            const delay = Math.pow(2, retries) * 1000;
             console.log(`Google Books API unavailable, retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
@@ -132,7 +136,6 @@ export const searchBooks = async (
 
         const data: GoogleBooksSearchResponse = await response.json();
         
-        // Cache the result
         searchCache.set(cacheKey, data);
         
         return data;
@@ -155,13 +158,9 @@ export const searchBooks = async (
   }
 };
 
-/**
- * Get details of a specific book
- */
 export const getBookDetails = async (volumeId: string): Promise<GoogleBooksVolume | null> => {
   const cacheKey = `book:${volumeId}`;
   
-  // Check cache first
   if (searchCache.has(cacheKey)) {
     return searchCache.get(cacheKey) as GoogleBooksVolume;
   }
@@ -179,10 +178,9 @@ export const getBookDetails = async (volumeId: string): Promise<GoogleBooksVolum
         const response = await fetch(url.toString());
 
         if (response.status === 503) {
-          // Service Unavailable - retry with exponential backoff
           retries++;
           if (retries < maxRetries) {
-            const delay = Math.pow(2, retries) * 1000; // 2s, 4s, 8s
+            const delay = Math.pow(2, retries) * 1000;
             console.log(`Google Books API unavailable, retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
@@ -197,7 +195,6 @@ export const getBookDetails = async (volumeId: string): Promise<GoogleBooksVolum
 
         const data: GoogleBooksVolume = await response.json();
         
-        // Cache the result
         searchCache.set(cacheKey, data);
         
         return data;
@@ -220,13 +217,6 @@ export const getBookDetails = async (volumeId: string): Promise<GoogleBooksVolum
   }
 };
 
-/**
- * Clear cache (useful for testing or manual cache invalidation)
- */
 export const clearCache = (): void => {
   searchCache.clear();
 };
-
-
-
-
