@@ -6,8 +6,8 @@ import {
   BORROW_FEE,
   OVERDUE_RATE_PER_DAY,
   ActiveLoan,
-} from './loanService';
-import { Book } from '../lib/data';
+} from '../../app/services/loanService';
+import { Book } from '../../app/lib/data';
 
 const mockBook: Book = {
   id: 'book-test-1',
@@ -38,8 +38,6 @@ afterEach(() => {
 });
 
 describe('loanService', () => {
-  // ── Happy Paths ───────────────────────────────────────────────────────────
-
   describe('Happy Path 1 — borrowBook sets returnDate exactly 1 month ahead', () => {
     it('creates a loan whose returnDate is exactly 1 month after borrowedDate', () => {
       const fixedNow = new Date('2026-01-15T12:00:00.000Z');
@@ -67,13 +65,9 @@ describe('loanService', () => {
         returnDate: tenDaysFromNow.toISOString(),
       };
 
-      const fine = calculateLoanFine(loan);
-
-      expect(fine).toBe(BORROW_FEE);
+      expect(calculateLoanFine(loan)).toBe(BORROW_FEE);
     });
   });
-
-  // ── Sad Paths ─────────────────────────────────────────────────────────────
 
   describe('Sad Path 1 — calculateLoanFine adds R$1/day for each overdue day', () => {
     it('charges BORROW_FEE plus overdue surcharge when the due date has passed', () => {
@@ -87,9 +81,7 @@ describe('loanService', () => {
       };
 
       const fine = calculateLoanFine(loan);
-      const expectedFine = BORROW_FEE + overdueDays * OVERDUE_RATE_PER_DAY;
-
-      expect(fine).toBe(expectedFine); // R$5 fixed + R$5 overdue = R$10
+      expect(fine).toBe(BORROW_FEE + overdueDays * OVERDUE_RATE_PER_DAY);
     });
   });
 

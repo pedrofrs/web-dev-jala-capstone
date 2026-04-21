@@ -34,6 +34,7 @@ import {
   getWishlist,
   removeFromWishlist,
 } from '../services/localStorageService';
+import { addNotification } from '../services/notificationService';
 import {
   ActiveLoan,
   LoanHistoryEntry,
@@ -77,7 +78,9 @@ export default function MyLibrary() {
   }, [activeTab]);
 
   function handleReturn(loanId: string) {
+    const loan = loans.find((l) => l.id === loanId);
     returnBook(loanId);
+    if (loan) addNotification('returned', loan.book.title, loan.book.author);
     refreshLoans();
   }
 

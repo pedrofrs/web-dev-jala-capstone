@@ -1,13 +1,13 @@
 import { NavLink } from 'react-router';
-import { Library, BookOpen, Heart, Settings, Bell, DoorOpen, Database, Clock, FileText } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { Library, BookOpen, Heart, Settings, Clock } from 'lucide-react';
 import { UserMenu } from './UserMenu';
+import { NotificationsModal } from './NotificationsModal';
 
 export function Sidebar() {
   const navItems = [
     { to: '/', label: 'Explore', icon: Library },
     { to: '/my-library', label: 'My Library', icon: BookOpen },
-    { to: '/wishlist', label: 'Wishlist', icon: Heart, badge: 2 },
+    { to: '/wishlist', label: 'Wishlist', icon: Heart },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -33,23 +33,12 @@ export function Sidebar() {
           >
             <item.icon className="w-5 h-5" />
             <span className="flex-1">{item.label}</span>
-            {item.badge && (
-              <Badge className="bg-warning text-warning-foreground">
-                {item.badge}
-              </Badge>
-            )}
           </NavLink>
         ))}
       </nav>
 
       <div className="p-4 space-y-3 border-t border-border">
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-accent transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="flex-1">Notifications</span>
-          <Badge className="bg-destructive text-destructive-foreground">
-            3
-          </Badge>
-        </button>
+        <NotificationsModal />
         
         <div className="px-4 py-2 bg-accent/50 rounded-lg">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

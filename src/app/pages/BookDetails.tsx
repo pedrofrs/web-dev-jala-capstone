@@ -33,6 +33,7 @@ import {
   removeFromWishlist,
 } from '../services/localStorageService';
 import { borrowBook, isAlreadyBorrowed } from '../services/loanService';
+import { addNotification } from '../services/notificationService';
 
 export default function BookDetails() {
   const { id } = useParams();
@@ -102,6 +103,7 @@ export default function BookDetails() {
   function handleBorrow() {
     if (!book || isBorrowed) return;
     borrowBook(book);
+    addNotification('borrowed', book.title, book.author);
     setIsBorrowed(true);
     navigate('/my-library', { state: { tab: 'loans' } });
   }
